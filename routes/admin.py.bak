@@ -1,0 +1,47 @@
+import sqlite3, os
+from flask import Blueprint, jsonify
+from models import get_session, User
+from auth_utils import jwt_required
+
+admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
+DB_PATH = os.getenv('DATABASE_PATH', 'eat_good.db')
+
+
+def _admin(u): return u['role'] == 'admin'
+
+
+@admin_bp.route('/stats', methods=['GET'])
+@jwt_required
+def stats(current_user):
+    if not _admin(current_user): return jsonify({'error': 'Доступ заборонено'}), 403
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    data = {
+        'total_users':       conn.execute("SELECT COUNT(*) FROM users").fetchone()[0],
+        'total_cafes':       conn.execute("SELECT COUNT(*) FROM cafes").fetchone()[0],
+        'total_orders':      conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0],
+        'completed_orders':  conn.execute("SELECT COUNT(*) FROM orders WHERE status='completed'").fetchone()[0],
+        'active_menu_items': conn.execute("SELECT COUNT(*) FROM menu_items WHERE is_active=1").fetchone()[0],
+    }
+    conn.close()
+    return jsonify(data), 200
+
+
+@admin_bp.route('/users', methods=['GET'])
+@jwt_required
+def list_users(current_user):
+    if not _admin(current_user): return jsonify({'error': 'Доступ заборонено'}), 403
+    with get_session() as s:
+        return jsonify([u.to_dict() for u in s.query(User).all()]), 200
+
+
+@admin_bp.route('/users/<int:uid>/toggle', methods=['POST'])
+@jwt_required
+def toggle_user(current_user, uid):
+    if not _admin(current_user): return jsonify({'error': 'Доступ заборонено'}), 403
+    with get_session() as s:
+        u = s.get(User, uid)
+        if not u: return jsonify({'error': 'Не знайдено'}), 404
+        u.is_active = not u.is_active
+        s.commit()
+        return jsonify(u.to_dict()), 200
