@@ -1720,7 +1720,7 @@ async function loadConsumerOffers(){
     </div>`;
 
   const sliderRow = (cards) => `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;">
       ${cards}
     </div>`;
 
@@ -1755,7 +1755,7 @@ async function loadConsumerOffers(){
         
       </div>
     </div>
-    <div class="cards-grid" id="consumerGrid" style="grid-template-columns:1fr"></div>`;
+    <div class="cards-grid" id="consumerGrid"></div>`;
 
   renderGrid(items, 'consumerGrid');
 }
